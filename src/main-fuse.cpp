@@ -23,12 +23,21 @@ std::shared_ptr<Reader> g_fileReader;
 std::unique_ptr<HFSHighLevelVolume> g_volume;
 std::unique_ptr<PartitionedDisk> g_partitions;
 
+//And a more complex example:
+struct darling_args {
+     int do_listing;
+};
+
 enum {
      KEY_VERSION,
      KEY_HELP,
 };
 
+#define DARLING_OPT(t, p, v) { t, offsetof(struct darling_args, p), v }
+
 static struct fuse_opt darling_opts[] = {
+	DARLING_OPT("-l", do_listing, 1),
+
 	FUSE_OPT_KEY("-V",             KEY_VERSION),
 	FUSE_OPT_KEY("--version",      KEY_VERSION),
 	FUSE_OPT_KEY("-h",             KEY_HELP),
@@ -38,6 +47,7 @@ static struct fuse_opt darling_opts[] = {
 };
 
 static int darling_opt_proc(void *data, const char *arg, int key, struct fuse_args *outargs);
+static void openDisk(const char* path, const struct darling_args *config);
 
 int main(int argc, char** argv)
 {
@@ -45,6 +55,7 @@ int main(int argc, char** argv)
 	{
 		struct fuse_operations ops;
 		struct fuse_args args;
+		struct darling_args darling_args;
 
 		if (argc < 3)
 		{
@@ -52,10 +63,12 @@ int main(int argc, char** argv)
 			return 1;
 		}
 
+		memset(&darling_args, 0, sizeof(darling_args));
+
 		args = FUSE_ARGS_INIT(argc, argv);
-		fuse_opt_parse(&args, NULL, darling_opts, darling_opt_proc);
-	
-		openDisk(argv[1]);
+		fuse_opt_parse(&args, &darling_args, darling_opts, darling_opt_proc);
+
+		openDisk(argv[1], &darling_args);
 	
 		std::cout << "Everything looks OK, disk mounted\n";
 
@@ -121,7 +134,7 @@ static int darling_opt_proc(void *data, const char *arg, int key, struct fuse_ar
 	return 1;
 }
 
-void openDisk(const char* path)
+void openDisk(const char* path, const struct darling_args *config)
 {
 	int partIndex = -1;
 	std::shared_ptr<HFSVolume> volume;
@@ -142,6 +155,15 @@ void openDisk(const char* path)
 	if (g_partitions)
 	{
 		const std::vector<PartitionedDisk::Partition>& parts = g_partitions->partitions();
+
+		if (config->do_listing) {
+			for (size_t i = 0; i < parts.size(); i++)
+			{
+				std::cout << "Partition #" << i+1 << " of type " << parts[i].type << " offset " << parts[i].offset << " size " << parts[i].size << std::endl;
+
+			}
+			exit(0);
+		}
 
 		for (size_t i = 0; i < parts.size(); i++)
 		{

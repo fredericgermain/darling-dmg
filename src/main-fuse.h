@@ -5,7 +5,6 @@
 #include <fuse.h>
 
 static void showHelp(const char* argv0);
-static void openDisk(const char* path);
 
 int hfs_getattr(const char* path, struct stat* stat);
 int hfs_readlink(const char* path, char* buf, size_t size);

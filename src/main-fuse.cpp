@@ -26,6 +26,7 @@ std::unique_ptr<PartitionedDisk> g_partitions;
 //And a more complex example:
 struct darling_args {
      int do_listing;
+     int partnum;
 };
 
 enum {
@@ -37,6 +38,7 @@ enum {
 
 static struct fuse_opt darling_opts[] = {
 	DARLING_OPT("-l", do_listing, 1),
+	DARLING_OPT("-n %i", partnum, -1),
 
 	FUSE_OPT_KEY("-V",             KEY_VERSION),
 	FUSE_OPT_KEY("--version",      KEY_VERSION),
@@ -64,6 +66,7 @@ int main(int argc, char** argv)
 		}
 
 		memset(&darling_args, 0, sizeof(darling_args));
+		darling_args.partnum = -1;
 
 		args = FUSE_ARGS_INIT(argc, argv);
 		fuse_opt_parse(&args, &darling_args, darling_opts, darling_opt_proc);

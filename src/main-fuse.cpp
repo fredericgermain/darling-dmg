@@ -23,21 +23,42 @@ std::shared_ptr<Reader> g_fileReader;
 std::unique_ptr<HFSHighLevelVolume> g_volume;
 std::unique_ptr<PartitionedDisk> g_partitions;
 
+enum {
+     KEY_VERSION,
+     KEY_HELP,
+};
+
+static struct fuse_opt darling_opts[] = {
+	FUSE_OPT_KEY("-V",             KEY_VERSION),
+	FUSE_OPT_KEY("--version",      KEY_VERSION),
+	FUSE_OPT_KEY("-h",             KEY_HELP),
+	FUSE_OPT_KEY("--help",         KEY_HELP),
+
+	FUSE_OPT_END
+};
+
+static int darling_opt_proc(void *data, const char *arg, int key, struct fuse_args *outargs);
+
 int main(int argc, char** argv)
 {
 	try
 	{
 		struct fuse_operations ops;
-		struct fuse_args args = FUSE_ARGS_INIT(0, NULL);
-	
+		struct fuse_args args;
+
 		if (argc < 3)
 		{
 			showHelp(argv[0]);
 			return 1;
 		}
+
+		args = FUSE_ARGS_INIT(argc, argv);
+		fuse_opt_parse(&args, NULL, darling_opts, darling_opt_proc);
 	
 		openDisk(argv[1]);
 	
+		std::cout << "Everything looks OK, disk mounted\n";
+
 		memset(&ops, 0, sizeof(ops));
 	
 		ops.getattr = hfs_getattr;
@@ -51,6 +72,7 @@ int main(int argc, char** argv)
 		ops.getxattr = hfs_getxattr;
 		ops.listxattr = hfs_listxattr;
 	
+		args = FUSE_ARGS_INIT(0, NULL);
 		for (int i = 0; i < argc; i++)
 		{
 			if (i == 1)
@@ -60,8 +82,6 @@ int main(int argc, char** argv)
 		}
 		fuse_opt_add_arg(&args, "-oro");
 		fuse_opt_add_arg(&args, "-s");
-	
-		std::cout << "Everything looks OK, disk mounted\n";
 
 		return fuse_main(args.argc, args.argv, &ops, 0);
 	}
@@ -88,6 +108,18 @@ void showHelp(const char* argv0)
 	std::cerr << argv0 << " automatically selects the first HFS+/HFSX partition.\n";
 }
 
+static int darling_opt_proc(void *data, const char *arg, int key, struct fuse_args *outargs)
+{
+	if (key == KEY_VERSION) {
+		std::cout << "version xxxxx" << std::endl;
+		exit(0);
+	}
+	if (key == KEY_HELP) {
+		showHelp(outargs->argv[0]);
+		exit(0);
+	}
+	return 1;
+}
 
 void openDisk(const char* path)
 {

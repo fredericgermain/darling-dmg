@@ -26,6 +26,16 @@ HFSVolume::HFSVolume(std::shared_ptr<Reader> reader)
 	if (be(m_header.signature) != HFSP_SIGNATURE && be(m_header.signature) != HFSX_SIGNATURE)
 		throw io_error("Invalid HFS+/HFSX signature");
 
+	// bless --info
+	std::cout << "finderInfo[0] Blessed System Folder ino 0x" << std::hex << m_header.finderInfo[0] << std::endl;
+	std::cout << "finderInfo[1] Blessed System File ino 0x" << std::hex << m_header.finderInfo[1] << std::endl;
+	std::cout << "finderInfo[2] Open-folder linked list ino 0x" << std::hex << m_header.finderInfo[2] << std::endl;
+	std::cout << "finderInfo[3] No alternate OS blessed file/folder ino 0x" << std::hex << m_header.finderInfo[3] << std::endl;
+	std::cout << "finderInfo[4] Unused field ino 0x" << std::hex << m_header.finderInfo[4] << std::endl;
+	std::cout << "finderInfo[5] OS X blessed folder ino 0x" << std::hex << m_header.finderInfo[5] << std::endl;
+	std::cout << "finderInfo[6] 0x" << std::hex << m_header.finderInfo[6] << std::endl;
+	std::cout << "finderInfo[7] 0x" << std::hex << m_header.finderInfo[7] << std::endl;
+	
 	std::shared_ptr<HFSFork> fork (new HFSFork(this, m_header.extentsFile));
 	m_overflowExtents = new HFSExtentsOverflowBTree(fork, &m_btreeZone);
 	

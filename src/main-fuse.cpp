@@ -26,6 +26,7 @@ std::unique_ptr<PartitionedDisk> g_partitions;
 //And a more complex example:
 struct darling_args {
      int do_listing;
+     char *output;
      int partnum;
 };
 
@@ -39,6 +40,7 @@ enum {
 static struct fuse_opt darling_opts[] = {
 	DARLING_OPT("-l", do_listing, 1),
 	DARLING_OPT("-n %i", partnum, -1),
+	DARLING_OPT("output=%s", output, 0),
 
 	FUSE_OPT_KEY("-V",             KEY_VERSION),
 	FUSE_OPT_KEY("--version",      KEY_VERSION),
@@ -70,6 +72,7 @@ int main(int argc, char** argv)
 
 		args = FUSE_ARGS_INIT(argc, argv);
 		fuse_opt_parse(&args, &darling_args, darling_opts, darling_opt_proc);
+		fuse_opt_free_args(&args);
 
 		openDisk(argv[1], &darling_args);
 	
@@ -99,7 +102,11 @@ int main(int argc, char** argv)
 		fuse_opt_add_arg(&args, "-oro");
 		fuse_opt_add_arg(&args, "-s");
 
-		return fuse_main(args.argc, args.argv, &ops, 0);
+
+		fuse_main(args.argc, args.argv, &ops, 0);
+		
+		fuse_opt_free_args(&args);
+		return 0;
 	}
 	catch (const std::exception& e)
 	{
@@ -163,6 +170,37 @@ void openDisk(const char* path, const struct darling_args *config)
 			for (size_t i = 0; i < parts.size(); i++)
 			{
 				std::cout << "Partition #" << i+1 << " of type " << parts[i].type << " offset " << parts[i].offset << " size " << parts[i].size << std::endl;
+
+			}
+			exit(0);
+		}
+
+		if (config->output) {
+			std::cout << "do outputg" << std::endl;
+			int fd;
+
+			fd = open(config->output, O_CREAT|O_WRONLY, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP);
+
+			for (size_t i = 0; i < parts.size(); i++)
+			{
+				std::cout << "Extract partition #" << i+1 << " of type " << parts[i].type << " offset " << parts[i].offset << " size " << parts[i].size << std::endl;
+
+				std::shared_ptr<Reader> reader = g_partitions->readerForPartition(i);
+				Reader *r;
+				int32_t max_length;
+				int32_t count;
+				uint64_t offset;
+				int32_t byteread;
+
+				//lseek(fd, parts[i].offset, SEEK_SET);
+				max_length = reader->length();
+				std::cout << "max_length " << max_length << std::endl;
+				unsigned char buf[max_length];
+				offset = 0;
+				count = sizeof(buf);
+				byteread = reader->read(buf, count, offset);
+
+				std::cout << "read " << byteread << std::endl;
 
 			}
 			exit(0);
